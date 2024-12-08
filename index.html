@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Game</title>
+    <style>
+        body { text-align: center; background-color: black; color: white; font-family: Arial, sans-serif; }
+        canvas { border: 2px solid white; display: block; margin: 0 auto; }
+        #gameSection { display: none; }
+        #restartBtn { display: none; margin-top: 20px; }
+        #startGameBtn { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Tennis Game</h1>
+    <button id="startGameBtn">Start Game</button>
+    <div id="gameSection">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <button id="restartBtn" onclick="restartGame()">Restart Game</button>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

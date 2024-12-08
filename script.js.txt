@@ -1,0 +1,225 @@
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const restartBtn = document.getElementById('restartBtn');
+const startGameBtn = document.getElementById('startGameBtn');
+const gameSection = document.getElementById('gameSection');
+
+const paddleWidth = 10;
+const paddleHeight = 80;
+const ballSize = 10;
+const canvasWidth = canvas.width;
+const canvasHeight = canvas.height;
+let isPaused = false; // Pause flag
+let winner = null; // Game winner
+let countdown = 3; // Countdown time after scoring
+let countdownInProgress = false; // Flag to track countdown status
+
+// Players
+const player1 = { x: 20, y: canvasHeight / 2 - paddleHeight / 2, dy: 0, score: 0 };
+const player2 = { x: canvasWidth - 30, y: canvasHeight / 2 - paddleHeight / 2, dy: 0, score: 0 };
+
+// Ball
+const ball = {
+    x: canvasWidth / 2,
+    y: canvasHeight / 2,
+    dx: 4,
+    dy: 4,
+    speed: 4,
+};
+
+// Draw paddle
+function drawPaddle(x, y) {
+    ctx.fillStyle = 'white';
+    ctx.fillRect(x, y, paddleWidth, paddleHeight);
+}
+
+// Draw ball
+function drawBall(x, y) {
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(x, y, ballSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+}
+
+// Draw score
+function drawScore() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Player 1: ${player1.score}`, 20, 30);
+    ctx.fillText(`Player 2: ${player2.score}`, canvasWidth - 120, 30);
+}
+
+// Draw countdown
+function drawCountdown() {
+    if (countdownInProgress) {
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Resuming in ${countdown}`, canvasWidth / 2, canvasHeight / 2);
+    }
+}
+
+// Update paddles' positions
+function updatePaddles() {
+    player1.y += player1.dy;
+    player2.y += player2.dy;
+
+    // Prevent paddles from moving out of bounds
+    player1.y = Math.max(Math.min(player1.y, canvasHeight - paddleHeight), 0);
+    player2.y = Math.max(Math.min(player2.y, canvasHeight - paddleHeight), 0);
+}
+
+// Reflect ball on paddle hit
+function reflectBall(paddle) {
+    const paddleCenter = paddle.y + paddleHeight / 2;
+    const ballDistance = ball.y - paddleCenter;
+    const maxBounceAngle = Math.PI / 4; // Max 45 degrees
+    const normalizedDistance = ballDistance / (paddleHeight / 2);
+    const bounceAngle = normalizedDistance * maxBounceAngle;
+
+    ball.dx = -ball.dx; // Reverse horizontal direction
+    ball.dy = ball.speed * Math.sin(bounceAngle); // Adjust vertical direction
+}
+
+// Reset ball and update scores
+function resetBall(winner) {
+    if (winner === 'player1') player1.score++;
+    if (winner === 'player2') player2.score++;
+
+    ball.x = canvasWidth / 2;
+    ball.y = canvasHeight / 2;
+    ball.dx = ball.speed * (Math.random() > 0.5 ? 1 : -1);
+    ball.dy = ball.speed * (Math.random() > 0.5 ? 1 : -1);
+
+    if (player1.score >= 10 || player2.score >= 10) {
+        winner = player1.score >= 10 ? 'Player 1' : 'Player 2';
+        endGame();
+    } else {
+        startCountdown(); // Start countdown after each point
+    }
+}
+
+// End game and display winner
+function endGame() {
+    isPaused = true;
+    restartBtn.style.display = 'block'; // Show restart button
+}
+
+// Restart the game
+function restartGame() {
+    player1.score = 0;
+    player2.score = 0;
+    ball.x = canvasWidth / 2;
+    ball.y = canvasHeight / 2;
+    ball.dx = 4;
+    ball.dy = 4;
+    isPaused = false;
+    winner = null;
+    countdown = 3;
+    countdownInProgress = false;
+    restartBtn.style.display = 'none'; // Hide restart button
+    gameLoop(); // Start the game loop again
+}
+
+// Pause game and show countdown
+function startCountdown() {
+    countdownInProgress = true;
+    isPaused = true;
+
+    // Countdown interval
+    const interval = setInterval(() => {
+        draw(); // Redraw everything
+        drawCountdown(); // Draw countdown
+        countdown--;
+
+        if (countdown < 0) {
+            clearInterval(interval);
+            countdownInProgress = false;
+            isPaused = false;
+            countdown = 3; // Reset countdown for the next point
+        }
+    }, 1000);
+}
+
+// Update ball position and check collisions
+function updateBall() {
+    if (isPaused || countdownInProgress) return; // Stop updates during pause or countdown
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    // Ball collision with top and bottom walls
+    if (ball.y <= ballSize / 2 || ball.y >= canvasHeight - ballSize / 2) {
+        ball.dy *= -1; // Bounce
+    }
+
+    // Ball collision with paddles
+    if (
+        ball.x - ballSize / 2 <= player1.x + paddleWidth &&
+        ball.y >= player1.y &&
+        ball.y <= player1.y + paddleHeight
+    ) {
+        reflectBall(player1);
+    }
+
+    if (
+        ball.x + ballSize / 2 >= player2.x &&
+        ball.y >= player2.y &&
+        ball.y <= player2.y + paddleHeight
+    ) {
+        reflectBall(player2);
+    }
+
+    // Check if ball crosses bounds (score a point)
+    if (ball.x < 0) {
+        resetBall('player2');
+    }
+    if (ball.x > canvasWidth) {
+        resetBall('player1');
+    }
+}
+
+// Draw everything
+function draw() {
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    drawPaddle(player1.x, player1.y);
+    drawPaddle(player2.x, player2.y);
+    drawBall(ball.x, ball.y);
+    drawScore();
+}
+
+// Game loop
+function gameLoop() {
+    if (!isPaused) {
+        updatePaddles();
+        updateBall();
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+// Start the game when the button is clicked
+startGameBtn.addEventListener('click', () => {
+    // Hide the start button and show the game section
+    startGameBtn.style.display = 'none';
+    gameSection.classList.remove('hidden');
+    
+    // Start the game loop
+    gameLoop(); 
+});
+
+// Event listeners for key press and release
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'w') player1.dy = -5;
+    if (e.key === 's') player1.dy = 5;
+    if (e.key === '8') player2.dy = -5;
+    if (e.key === '2') player2.dy = 5;
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'w' || e.key === 's') player1.dy = 0;
+    if (e.key === '8' || e.key === '2') player2.dy = 0;
+});
